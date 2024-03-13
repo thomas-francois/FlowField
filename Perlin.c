@@ -33,13 +33,51 @@ typedef struct Vector {
   double vy;
 } Vector;
 
+typedef struct Slider {
+	SDL_Rect zone;
+	int min;
+	int value;
+	int max;
+} Slider;
+
+typedef struct ColorPicker {
+	SDL_Rect picker;
+	SDL_Rect swatch;
+	Color color;
+} ColorPicker;
+
+// typedef enum {
+//   particlesColor,
+//   backgroundColor,
+//   fieldSize,
+//   particles,
+//   lifespan,
+//   speed,
+//   inertia,
+//   opacity,
+//   none,
+// } actionType;
+
+
+
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Texture *sidebarTexture = NULL;
 SDL_Event event;
+int seed = 0;
 
-Color backgroundColor = {0, 255, 255, 255};
-Color particlesColor = {255, 255, 0, 255};
+// actionType action = none;
+
+ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {255, 255, 255, 255}};
+ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {0, 0, 0, 255}};
+
+Slider fieldSize = {{820, 71, 160, 22}, 10, 20, 200};
+Slider particles = {{815, 341, 160, 22}, 5000, 10000, 50000000};
+Slider lifespan = {{815, 384, 160, 22}, 5, 25, 50};
+Slider speed = {{815, 431, 160, 22}, 2, 5, 50};
+Slider inertia = {{815, 474, 160, 22}, 0, 0, 100};
+Slider opacity = {{815, 521, 160, 22}, 0, 255, 255};
+
 
 Vector vectorField[(SCREEN_WIDTH / GRID_SIZE + 1) * (SCREEN_HEIGHT / GRID_SIZE + 1)];
 
@@ -143,12 +181,14 @@ double getValue(int x, int y) {
 }
 
 void createFlowField(int particles, int lifespan, int speed) {
+	srand(seed);
 	speed = speed * (randomInt(0, 1) * 2 - 1);
 	for (int i = 0; i < particles; ++i)
 	{
 		int baseX = randomInt(0, SCREEN_WIDTH);
 		int baseY = randomInt(0, SCREEN_HEIGHT);
 		SDL_SetRenderDrawColor(renderer, 0, randomInt(0, 255), randomInt(0, 255), 20);
+		// SDL_SetRenderDrawColor(renderer, partPicker.color.r, partPicker.color.g, partPicker.color.b, partPicker.color.a);
 
 		for (int j = 0; j < lifespan; ++j)
 		{
@@ -215,8 +255,8 @@ Color HsvaToRgba(int h, int s, int v, int a) {
 
 void createColorPickers() {
 	// SDL_RenderCopy(renderer, sidebarTexture, NULL, NULL);
-	Rect r1 = {810, 249, 180, 30, backgroundColor};
-	Rect r2 = {810, 682, 180, 30, particlesColor};
+	Rect r1 = {810, 227, 180, 30, bgPicker.color};
+	Rect r2 = {810, 682, 180, 30, partPicker.color};
 	drawAlphaRect(r1);
 	drawAlphaRect(r2);
 
@@ -225,9 +265,7 @@ void createColorPickers() {
 		for (int y = 0; y < 100; y++) {
 			c = HsvaToRgba(x * 1.41, (10000 - y * y) / 39.21, y * 2.55, 255);
 			SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
-			SDL_RenderDrawPoint(renderer, 810 + x, 139 + y);
-			c = HsvaToRgba(y * 2.55, (10000 - (x / 1.8) * (x / 1.8)) / 39.21, x * 1.41, 255);
-			SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+			SDL_RenderDrawPoint(renderer, 810 + x, 117 + y);
 			SDL_RenderDrawPoint(renderer, 810 + x, 572 + y);
 		}
 	}
@@ -235,25 +273,26 @@ void createColorPickers() {
 
 
 void createSliders() {
-	Color sliderColor = {180, 135, 40 ,255};
-	Rect slider = {860, 74, 5, 25, sliderColor};
-	drawAlphaRect(slider);
-	slider.y = 373;
-	drawAlphaRect(slider);
-	slider.y = 440;
-	drawAlphaRect(slider);
-	slider.y = 507;
-	drawAlphaRect(slider);
+	Rect cursor = {0, 0, 5, 22, {170, 125, 30 ,255}};
+	Slider sliders[] = {fieldSize, particles, lifespan, speed, inertia, opacity};
+	Slider currentSlider;
+
+	for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
+		currentSlider = sliders[i];
+		cursor.x = currentSlider.zone.x + (currentSlider.value - currentSlider.min) / (float) (currentSlider.max - currentSlider.min) * currentSlider.zone.w;
+		cursor.y = currentSlider.zone.y;
+		drawAlphaRect(cursor);
+	}
 }
 
 
-
 void cleanScreen() {
-	SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
+	SDL_SetRenderDrawColor(renderer, bgPicker.color.r, bgPicker.color.g, bgPicker.color.b, bgPicker.color.a);
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, sidebarTexture, NULL, NULL);
 	createColorPickers();
 	createSliders();
+	createFlowField(10000, 25, 5);
 	SDL_RenderPresent(renderer);
 }
 
@@ -266,7 +305,7 @@ int main() {
 	}
 
 	// Create background
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	SDL_SetRenderDrawColor(renderer, partPicker.color.r, partPicker.color.g, partPicker.color.b, partPicker.color.a);
 	SDL_RenderClear(renderer);
 	SDL_RenderPresent(renderer);
 	SDL_RenderPresent(renderer);
@@ -289,9 +328,62 @@ int main() {
 			if (event.type == SDL_QUIT) {
 				quit = 1;
 			}
-			if (event.type == SDL_MOUSEBUTTONDOWN) {
-				cleanScreen();
+			else if (event.type == SDL_MOUSEBUTTONUP) {
+				// action = none;
+			}
+			else if (event.type == SDL_MOUSEBUTTONDOWN) {
+
+				if (event.button.x < 810 || event.button.x > 990){
+					continue;
+				}
+				// Background picker
+				if (event.button.y > 117 && event.button.y < 217) {
+					printf("Background picker\n");
+					int y = event.button.y - 117;
+					Color c = HsvaToRgba((event.button.x - 810) * 1.41, (10000 - y * y) / 39.21, y * 2.55, 255);
+					bgPicker.color = c;
+					cleanScreen();
+
+				}
+				// Particle picker
+				else if (event.button.y > 572 && event.button.y < 672) {
+					printf("Particles picker\n");
+					int y = event.button.y - 572;
+					Color c = HsvaToRgba((event.button.x - 810) * 1.41, (10000 - y * y) / 39.21, y * 2.55, 255);
+					partPicker.color = c;
+					cleanScreen();
+				}
+				// New seed
+				else if (event.button.y > 735 && event.button.y < 785) {
+					printf("New seed\n");
+					seed = randomInt(0, 255);
+					createVectorField();
+					cleanScreen();
+				}
+				// Noise scale slider
+				else if (event.button.y > 73 && event.button.y < 93) {
+					printf("Scale slider\n");
+				}
+
 				// createColorPickers();
+			}
+			else if (event.type == SDL_MOUSEMOTION) {
+				// switch (action) {
+				// 	case fieldSize:
+				// 		break;
+				// 	case particles:
+				// 		break;
+				// 	case lifespan:
+				// 		break;
+				// 	case speed:
+				// 		break;
+				// 	case inertia:
+				// 		break;
+				// 	case opacity:
+				// 		break;
+				// 	default:
+				// 		break;
+				// }
 			}
 		}
 
