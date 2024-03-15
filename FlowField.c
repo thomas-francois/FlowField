@@ -3,10 +3,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-// clear; gcc $(pkg-config --cflags --libs sdl2) FlowField.c -o FlowField; ./FlowField; rm ./FlowField
-
-// TODO:
-// Handle mouse motion on sliders and color pickers
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
@@ -48,28 +44,12 @@ typedef struct ColorPicker {
 	Color color;
 } ColorPicker;
 
-// typedef enum {
-//   particlesColor,
-//   backgroundColor,
-//   fieldSize,
-//   particles,
-//   lifespan,
-//   speed,
-//   inertia,
-//   opacity,
-//   none,
-// } actionType;
-
-
-
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Texture *sidebarTexture = NULL;
 SDL_Event event;
 int seed = 10;
 int renderMode = 1;
-
-// actionType action = none;
 
 ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {14, 12, 89, 255}};
 ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {7, 130, 122, 255}};
@@ -121,15 +101,18 @@ int clamp(int d, int min, int max) {
   return t > max ? max : t;
 }
 
+
 void drawAlphaRect(Rect r) {
 	SDL_SetRenderDrawColor(renderer, r.color.r, r.color.g, r.color.b, r.color.a);
 	SDL_Rect rect1 = {r.x ,r.y ,r.w ,r.h};
 	SDL_RenderFillRect(renderer, &rect1);
 }
 
+
 int randomInt(int min, int max) {
 	return rand() % (max + 1 - min) + min;
 }
+
 
 double randomFloat(double min, double max) {
 	return ((double)rand() / (double)(RAND_MAX)) * (max - min) + min;
@@ -149,11 +132,13 @@ void createVectorField() {
 	}
 }
 
+
 double dotProduct(int x ,int y ,Vector vector) {
 	double dx = (x - vector.x) / (double) ((SCREEN_WIDTH / (float) fieldSize.value) + 1);
 	double dy = (y - vector.y) / (double) ((SCREEN_WIDTH / (float) fieldSize.value) + 1);
 	return dx * vector.vx + dy * vector.vy;
 }
+
 
 double interpolate(double a ,double b ,double w) {
 	return (a - b) * ((w * (w * 6 - 15) + 10) * w * w * w) + b;
@@ -241,7 +226,6 @@ int isInside(int x, int y, SDL_Rect zone) {
 }
 
 
-
 Color HsvaToRgba(int h, int s, int v, int a) {
     Color rgb = {0, 0, 0, a};
 
@@ -286,6 +270,7 @@ Color HsvaToRgba(int h, int s, int v, int a) {
 
     return rgb;
 }
+
 
 void createColorPickers() {
 	Color c;
@@ -338,9 +323,7 @@ void cleanScreen() {
 }
 
 
-
 int main() {
-
 	if (setupWindow() == 1) {
 		return 1;
 	}
@@ -374,9 +357,6 @@ int main() {
 					renderMode = (renderMode + 1) % 2;
 					cleanScreen();
 				}
-			}
-			else if (event.type == SDL_MOUSEBUTTONUP) {
-				// action = none;
 			}
 			else if (event.type == SDL_MOUSEBUTTONDOWN) {
 
@@ -417,30 +397,9 @@ int main() {
 						goto end;
 					}
 				}
-
-
-			}
-			else if (event.type == SDL_MOUSEMOTION) {
-				// switch (action) {
-				// 	case fieldSize:
-				// 		break;
-				// 	case particles:
-				// 		break;
-				// 	case lifespan:
-				// 		break;
-				// 	case speed:
-				// 		break;
-				// 	case inertia:
-				// 		break;
-				// 	case opacity:
-				// 		break;
-				// 	default:
-				// 		break;
-				// }
 			}
 
 			end: ;
-
 		}
 	}
 
