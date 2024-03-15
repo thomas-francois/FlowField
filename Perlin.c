@@ -5,9 +5,16 @@
 
 // clear; gcc $(pkg-config --cflags --libs sdl2) Perlin.c -o Perlin; ./Perlin; rm ./Perlin
 
-#define SCREEN_WIDTH 800	//window height
-#define SCREEN_HEIGHT 800	//window width
-#define GRID_SIZE 200
+// Motion
+// Dynamic picker getter / setter
+
+// Grid size
+// Part random color
+// Inertia
+
+
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 800
 
 #define PI 3.14159265359
 
@@ -71,15 +78,16 @@ int seed = 0;
 ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {255, 255, 255, 255}};
 ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {0, 0, 0, 255}};
 
-Slider fieldSize = {{820, 71, 160, 22}, 10, 20, 200};
-Slider particles = {{815, 341, 160, 22}, 5000, 10000, 50000000};
+Slider fieldSize = {{820, 71, 160, 22}, 3, 8, 16};
+Slider particles = {{815, 341, 160, 22}, 5000, 10000, 500000};
 Slider lifespan = {{815, 384, 160, 22}, 5, 25, 50};
-Slider speed = {{815, 431, 160, 22}, 2, 5, 50};
+Slider speed = {{815, 431, 160, 22}, 1, 5, 30};
 Slider inertia = {{815, 474, 160, 22}, 0, 0, 100};
 Slider opacity = {{815, 521, 160, 22}, 0, 255, 255};
+Slider *sliders[] = {&fieldSize, &particles, &lifespan, &speed, &inertia, &opacity};
 
-
-Vector vectorField[(SCREEN_WIDTH / GRID_SIZE + 1) * (SCREEN_HEIGHT / GRID_SIZE + 1)];
+Vector vectorField[400];
+// Vector vectorField[(SCREEN_WIDTH / GRID_SIZE + 1) * (SCREEN_HEIGHT / GRID_SIZE + 1)];
 
 
 int setupWindow() {
@@ -133,19 +141,21 @@ double randomFloat(double min, double max) {
 
 
 void createVectorField() {
-	for (int x = 0; x <= SCREEN_WIDTH; x += GRID_SIZE) {
-		for (int y = 0; y <= SCREEN_HEIGHT; y += GRID_SIZE) {
+	int gridSize = (SCREEN_WIDTH / (float) fieldSize.value);
+
+	for (int x = 0; x <= SCREEN_WIDTH; x += gridSize) {
+		for (int y = 0; y <= SCREEN_HEIGHT; y += gridSize) {
 			double angle = randomFloat(0, 2 * PI);
 			Vector v = {x, y, cos(angle), sin(angle)};
-			vectorField[(y / GRID_SIZE) * (SCREEN_HEIGHT / GRID_SIZE + 1) + x / GRID_SIZE] = v;
+			vectorField[(y / gridSize) * (SCREEN_HEIGHT / gridSize + 1) + x / gridSize] = v;
 		}
 
 	}
 }
 
 double dotProduct(int x ,int y ,Vector vector) {
-	double dx = (x - vector.x) / (double) GRID_SIZE;
-	double dy = (y - vector.y) / (double) GRID_SIZE;
+	double dx = (x - vector.x) / (double) ((SCREEN_WIDTH / (float) fieldSize.value) + 1);
+	double dy = (y - vector.y) / (double) ((SCREEN_WIDTH / (float) fieldSize.value) + 1);
 	return dx * vector.vx + dy * vector.vy;
 }
 
@@ -159,20 +169,21 @@ double getValue(int x, int y) {
 		return 0;
 	}
 
-	int x0 = x / GRID_SIZE;
-	int y0 = y / GRID_SIZE;
+	int gridSize = SCREEN_WIDTH / (float) fieldSize.value;
+	int x0 = x / gridSize;
+	int y0 = y / gridSize;
 	int x1 = x0 + 1;
 	int y1 = y0 + 1;
 
-	double dx = (double) (x % GRID_SIZE) / GRID_SIZE;
-	double dy = (double) (y % GRID_SIZE) / GRID_SIZE;
+	double dx = (x % gridSize) / (float) gridSize;
+	double dy = (y % gridSize) / (float) gridSize;
 
 	// printf("dx: %f, dy: %f\n", dx, dy);
 
-	double d0 = dotProduct(x, y, vectorField[x0 + y0 * (SCREEN_HEIGHT / GRID_SIZE + 1)]);
-	double d1 = dotProduct(x, y, vectorField[x1 + y0 * (SCREEN_HEIGHT / GRID_SIZE + 1)]);
-	double d2 = dotProduct(x, y, vectorField[x0 + y1 * (SCREEN_HEIGHT / GRID_SIZE + 1)]);
-	double d3 = dotProduct(x, y, vectorField[x1 + y1 * (SCREEN_HEIGHT / GRID_SIZE + 1)]);
+	double d0 = dotProduct(x, y, vectorField[x0 + y0 * (fieldSize.value + 1)]);
+	double d1 = dotProduct(x, y, vectorField[x1 + y0 * (fieldSize.value + 1)]);
+	double d2 = dotProduct(x, y, vectorField[x0 + y1 * (fieldSize.value + 1)]);
+	double d3 = dotProduct(x, y, vectorField[x1 + y1 * (fieldSize.value + 1)]);
 
 	double i0 = interpolate(d1, d0, dx);
 	double i1 = interpolate(d3, d2, dx);
@@ -180,27 +191,44 @@ double getValue(int x, int y) {
 	return interpolate(i1, i0, dy);
 }
 
-void createFlowField(int particles, int lifespan, int speed) {
+
+void createFlowField() {
+	// for (int x = 0; x <= SCREEN_WIDTH; x += 1) {
+	// 	for (int y = 0; y <= SCREEN_HEIGHT; y += 1) {
+	// 		double value = getValue(x, y);
+	// 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, clamp((value + 0.5) * 255, 0, 255));
+	// 		SDL_RenderDrawPoint(renderer, x, y);
+	// 	}
+	// }
+
+	// SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+	// for (int i = 0; i < (fieldSize.value + 1) * (fieldSize.value + 1); i ++) {
+	// 	Vector v = vectorField[i];
+	// 	SDL_RenderDrawLine(renderer, v.x, v.y, v.x + v.vx * 20, v.y + v.vy * 20);
+	// }
+
+
+
+
 	srand(seed);
-	speed = speed * (randomInt(0, 1) * 2 - 1);
-	for (int i = 0; i < particles; ++i)
+	for (int i = 0; i < particles.value; ++i)
 	{
 		int baseX = randomInt(0, SCREEN_WIDTH);
 		int baseY = randomInt(0, SCREEN_HEIGHT);
-		SDL_SetRenderDrawColor(renderer, 0, randomInt(0, 255), randomInt(0, 255), 20);
+		SDL_SetRenderDrawColor(renderer, 0, randomInt(0, 255), randomInt(0, 255), opacity.value);
 		// SDL_SetRenderDrawColor(renderer, partPicker.color.r, partPicker.color.g, partPicker.color.b, partPicker.color.a);
 
-		for (int j = 0; j < lifespan; ++j)
+		for (int j = 0; j < lifespan.value; ++j)
 		{
 			double value = (getValue(baseX, baseY) + 0.5) * 2 * PI;
-			int vx = (int) (cos(value) * speed);
-			int vy = (int) (sin(value) * speed);
-			SDL_RenderDrawLine(renderer, baseX, baseY, baseX + vx, baseY + vy);
-			baseX += vx;
-			baseY += vy;
+			int vx = (int) (cos(value) * speed.value);
+			int vy = (int) (sin(value) * speed.value);
 			if (baseX < 0 || baseX > SCREEN_WIDTH || baseY < 0 || baseY > SCREEN_HEIGHT) {
 				break;
 			}
+			SDL_RenderDrawLine(renderer, baseX, baseY, baseX + vx, baseY + vy);
+			baseX += vx;
+			baseY += vy;
 		}
 
 	}
@@ -274,11 +302,10 @@ void createColorPickers() {
 
 void createSliders() {
 	Rect cursor = {0, 0, 5, 22, {170, 125, 30 ,255}};
-	Slider sliders[] = {fieldSize, particles, lifespan, speed, inertia, opacity};
 	Slider currentSlider;
 
-	for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
-		currentSlider = sliders[i];
+	for (int i = 0; i < 6; i++) {
+		currentSlider = *sliders[i];
 		cursor.x = currentSlider.zone.x + (currentSlider.value - currentSlider.min) / (float) (currentSlider.max - currentSlider.min) * currentSlider.zone.w;
 		cursor.y = currentSlider.zone.y;
 		drawAlphaRect(cursor);
@@ -292,7 +319,7 @@ void cleanScreen() {
 	SDL_RenderCopy(renderer, sidebarTexture, NULL, NULL);
 	createColorPickers();
 	createSliders();
-	createFlowField(10000, 25, 5);
+	createFlowField();
 	SDL_RenderPresent(renderer);
 }
 
@@ -305,7 +332,7 @@ int main() {
 	}
 
 	// Create background
-	SDL_SetRenderDrawColor(renderer, partPicker.color.r, partPicker.color.g, partPicker.color.b, partPicker.color.a);
+	SDL_SetRenderDrawColor(renderer, bgPicker.color.r, bgPicker.color.g, bgPicker.color.b, bgPicker.color.a);
 	SDL_RenderClear(renderer);
 	SDL_RenderPresent(renderer);
 	SDL_RenderPresent(renderer);
@@ -315,7 +342,7 @@ int main() {
 
 	// Create initial flow field
 	createVectorField();
-	createFlowField(10000, 25, 5);
+	createFlowField();
 	SDL_RenderPresent(renderer);
 
 
@@ -360,12 +387,24 @@ int main() {
 					createVectorField();
 					cleanScreen();
 				}
-				// Noise scale slider
-				else if (event.button.y > 73 && event.button.y < 93) {
-					printf("Scale slider\n");
+
+				// Sliders
+				else {
+					Slider currentSlider;
+					for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
+						currentSlider = *sliders[i];
+						if (event.button.x > currentSlider.zone.x && event.button.x < currentSlider.zone.x + currentSlider.zone.w && event.button.y > currentSlider.zone.y && event.button.y < currentSlider.zone.y + currentSlider.zone.h) {
+							(*sliders[i]).value = (event.button.x - currentSlider.zone.x) / (float) currentSlider.zone.w * (currentSlider.max - currentSlider.min) + currentSlider.min;
+							if (sliders[i] == &fieldSize) {
+								createVectorField();
+							}
+							cleanScreen();
+						}
+					}
 				}
 
-				// createColorPickers();
+
+
 			}
 			else if (event.type == SDL_MOUSEMOTION) {
 				// switch (action) {
