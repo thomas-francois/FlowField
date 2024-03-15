@@ -56,7 +56,7 @@ ColorPicker partPicker = {{810, 576, 180, 100}, {810, 686, 180, 30}, {7, 130, 12
 ColorPicker *pickers[] = {&bgPicker, &partPicker};
 
 Slider fieldSize = {{815, 71, 172, 22}, 1, 8, 16};
-Slider particles = {{815, 343, 172, 22}, 5000, 10000, 100000};
+Slider particles = {{815, 343, 172, 22}, 1000, 10000, 100000};
 Slider lifespan = {{815, 388, 172, 22}, 5, 25, 50};
 Slider speed = {{815, 433, 172, 22}, 1, 5, 30};
 Slider opacity = {{815, 478, 172, 22}, 0, 100, 255};
@@ -189,6 +189,18 @@ void createFlowField() {
 		for (int i = 0; i < (fieldSize.value + 1) * (fieldSize.value + 1); i ++) {
 			Vector v = vectorField[i];
 			SDL_RenderDrawLine(renderer, v.x, v.y, v.x + v.vx * 20, v.y + v.vy * 20);
+			SDL_RenderDrawLine(renderer,
+				v.x + v.vx * 20,
+				v.y + v.vy * 20,
+				v.x + v.vx * 10 - v.vy * 5,
+				v.y + v.vy * 10 + v.vx * 5
+			);
+			SDL_RenderDrawLine(renderer,
+				v.x + v.vx * 20,
+				v.y + v.vy * 20,
+				v.x + v.vx * 10 + v.vy * 5,
+				v.y + v.vy * 10 - v.vx * 5
+			);
 		}
 	}
 
@@ -345,7 +357,7 @@ int main() {
 
 	// Main loop
 	int quit = 0;
-	SDL_Cursor *c;
+	SDL_Cursor *cursor;
 	SDL_Rect newSeed = {810, 740, 180, 50};
 	while (!quit) {
 
@@ -404,16 +416,16 @@ int main() {
 			else if (event.type == SDL_MOUSEMOTION) {
 				// Button
 				if (isInside(event.button.x ,event.button.y, newSeed)) {
-					c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-					SDL_SetCursor(c);
+					cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+					SDL_SetCursor(cursor);
 					continue;
 				}
 
 				// Sliders
 				for (unsigned int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
 					if (isInside(event.button.x, event.button.y, (*sliders[i]).zone)) {
-						c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-						SDL_SetCursor(c);
+						cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+						SDL_SetCursor(cursor);
 						goto end;
 					}
 				}
@@ -422,13 +434,13 @@ int main() {
 				ColorPicker currentPicker;
 				for (unsigned int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
 					if (isInside(event.button.x, event.button.y, (*pickers[i]).picker)) {
-						c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR);
-						SDL_SetCursor(c);
+						cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR);
+						SDL_SetCursor(cursor);
 						goto end;
 					}
 				}
-				c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-				SDL_SetCursor(c);
+				cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+				SDL_SetCursor(cursor);
 			}
 
 			end: ;
