@@ -8,7 +8,6 @@
 // TODO:
 // Handle mouse motion on sliders and color pickers
 // Rework how particles move (inertia & speed)
-// Dynamic position of color pickers
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
@@ -294,7 +293,7 @@ void createColorPickers() {
 	Color c;
 	ColorPicker currentPicker;
 
-	for (int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
+	for (unsigned int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
 		currentPicker = *pickers[i];
 
 		// Swatches
@@ -321,7 +320,7 @@ void createSliders() {
 	Rect cursor = {0, 0, 5, 22, {170, 125, 30 ,255}};
 	Slider currentSlider;
 
-	for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
+	for (unsigned int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
 		currentSlider = *sliders[i];
 		cursor.x = currentSlider.zone.x + (currentSlider.value - currentSlider.min) / (float) (currentSlider.max - currentSlider.min) * currentSlider.zone.w;
 		cursor.y = currentSlider.zone.y;
@@ -394,7 +393,7 @@ int main() {
 
 				// Sliders
 				Slider currentSlider;
-				for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
+				for (unsigned int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
 					currentSlider = *sliders[i];
 					if (isInside(event.button.x, event.button.y, currentSlider.zone)) {
 						(*sliders[i]).value = (event.button.x - currentSlider.zone.x) / (float) currentSlider.zone.w * (currentSlider.max - currentSlider.min) + currentSlider.min;
@@ -408,7 +407,7 @@ int main() {
 
 				// Pickers
 				ColorPicker currentPicker;
-				for (int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
+				for (unsigned int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
 					currentPicker = *pickers[i];
 					if (isInside(event.button.x, event.button.y, currentPicker.picker)) {
 						(*pickers[i]).color = HsvaToRgba(
