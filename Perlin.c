@@ -71,23 +71,23 @@ SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Texture *sidebarTexture = NULL;
 SDL_Event event;
-int seed = 0;
+int seed = 10;
+int renderMode = 1;
 
 // actionType action = none;
 
-ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {255, 255, 255, 255}};
-ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {0, 0, 0, 255}};
+ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {14, 12, 89, 255}};
+ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {7, 130, 122, 255}};
 
 Slider fieldSize = {{820, 71, 160, 22}, 3, 8, 16};
 Slider particles = {{815, 341, 160, 22}, 5000, 10000, 500000};
 Slider lifespan = {{815, 384, 160, 22}, 5, 25, 50};
 Slider speed = {{815, 431, 160, 22}, 1, 5, 30};
 Slider inertia = {{815, 474, 160, 22}, 0, 0, 100};
-Slider opacity = {{815, 521, 160, 22}, 0, 255, 255};
+Slider opacity = {{815, 521, 160, 22}, 0, 100, 255};
 Slider *sliders[] = {&fieldSize, &particles, &lifespan, &speed, &inertia, &opacity};
 
 Vector vectorField[400];
-// Vector vectorField[(SCREEN_WIDTH / GRID_SIZE + 1) * (SCREEN_HEIGHT / GRID_SIZE + 1)];
 
 
 int setupWindow() {
@@ -193,44 +193,52 @@ double getValue(int x, int y) {
 
 
 void createFlowField() {
-	// for (int x = 0; x <= SCREEN_WIDTH; x += 1) {
-	// 	for (int y = 0; y <= SCREEN_HEIGHT; y += 1) {
-	// 		double value = getValue(x, y);
-	// 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, clamp((value + 0.5) * 255, 0, 255));
-	// 		SDL_RenderDrawPoint(renderer, x, y);
-	// 	}
-	// }
+	if (renderMode == 0) {
+		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+		SDL_Rect screeWipe = {0 ,0 ,800, 800};
+		SDL_RenderFillRect(renderer, &screeWipe);
 
-	// SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-	// for (int i = 0; i < (fieldSize.value + 1) * (fieldSize.value + 1); i ++) {
-	// 	Vector v = vectorField[i];
-	// 	SDL_RenderDrawLine(renderer, v.x, v.y, v.x + v.vx * 20, v.y + v.vy * 20);
-	// }
-
-
-
-
-	srand(seed);
-	for (int i = 0; i < particles.value; ++i)
-	{
-		int baseX = randomInt(0, SCREEN_WIDTH);
-		int baseY = randomInt(0, SCREEN_HEIGHT);
-		SDL_SetRenderDrawColor(renderer, 0, randomInt(0, 255), randomInt(0, 255), opacity.value);
-		// SDL_SetRenderDrawColor(renderer, partPicker.color.r, partPicker.color.g, partPicker.color.b, partPicker.color.a);
-
-		for (int j = 0; j < lifespan.value; ++j)
-		{
-			double value = (getValue(baseX, baseY) + 0.5) * 2 * PI;
-			int vx = (int) (cos(value) * speed.value);
-			int vy = (int) (sin(value) * speed.value);
-			if (baseX < 0 || baseX > SCREEN_WIDTH || baseY < 0 || baseY > SCREEN_HEIGHT) {
-				break;
+		for (int x = 0; x <= SCREEN_WIDTH; x += 1) {
+			for (int y = 0; y <= SCREEN_HEIGHT; y += 1) {
+				double value = getValue(x, y);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, clamp((value + 0.5) * 255, 0, 255));
+				SDL_RenderDrawPoint(renderer, x, y);
 			}
-			SDL_RenderDrawLine(renderer, baseX, baseY, baseX + vx, baseY + vy);
-			baseX += vx;
-			baseY += vy;
 		}
 
+		SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+		for (int i = 0; i < (fieldSize.value + 1) * (fieldSize.value + 1); i ++) {
+			Vector v = vectorField[i];
+			SDL_RenderDrawLine(renderer, v.x, v.y, v.x + v.vx * 20, v.y + v.vy * 20);
+		}
+	}
+
+	else if (renderMode == 1) {
+		srand(seed);
+		int colorSpread = 40;
+		for (int i = 0; i < particles.value; ++i) {
+			int baseX = randomInt(0, SCREEN_WIDTH);
+			int baseY = randomInt(0, SCREEN_HEIGHT);
+			SDL_SetRenderDrawColor(
+				renderer,
+				clamp(partPicker.color.r + randomInt(-colorSpread, colorSpread), 0, 255),
+				clamp(partPicker.color.g + randomInt(-colorSpread, colorSpread), 0, 255),
+				clamp(partPicker.color.b + randomInt(-colorSpread, colorSpread), 0, 255),
+				opacity.value);
+
+			for (int j = 0; j < lifespan.value; ++j)
+			{
+				double value = (getValue(baseX, baseY) + 0.5) * 2 * PI;
+				int vx = (int) (cos(value) * speed.value);
+				int vy = (int) (sin(value) * speed.value);
+				if (baseX < 0 || baseX > SCREEN_WIDTH || baseY < 0 || baseY > SCREEN_HEIGHT) {
+					break;
+				}
+				SDL_RenderDrawLine(renderer, baseX, baseY, baseX + vx, baseY + vy);
+				baseX += vx;
+				baseY += vy;
+			}
+		}
 	}
 }
 
@@ -355,6 +363,12 @@ int main() {
 			if (event.type == SDL_QUIT) {
 				quit = 1;
 			}
+			else if (event.type == SDL_KEYDOWN) {
+				if (event.key.keysym.sym == SDLK_SPACE) {
+					renderMode = (renderMode + 1) % 2;
+					cleanScreen();
+				}
+			}
 			else if (event.type == SDL_MOUSEBUTTONUP) {
 				// action = none;
 			}
@@ -425,28 +439,6 @@ int main() {
 				// }
 			}
 		}
-
-		// Perlin visualisation:
-		// SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		// for (int i = 0; i < (SCREEN_WIDTH / GRID_SIZE + 1) * (SCREEN_HEIGHT / GRID_SIZE + 1); i += 1) {
-		// 	Vector v = vectorField[i];
-		// 	SDL_RenderDrawLine(renderer, v.x, v.y, v.x + v.vx * 20, v.y + v.vy * 20);
-		// }
-		// for (int x = 0; x <= SCREEN_WIDTH; x += 1) {
-		// 	for (int y = 0; y <= SCREEN_HEIGHT; y += 1) {
-		// 		double value = getValue(x, y);
-		// 		if (value < -10 || value > 10) {
-		// 			printf("value: %f\n", value);
-		// 		}
-		// 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, clamp((value + 0.5) * 255, 0, 255));
-		// 		SDL_RenderDrawPoint(renderer, x, y);
-		// 	}
-		// }
-
-		// Update the display
-		// SDL_UpdateTexture(screen_texture, NULL, screen->pixels, screen->w * sizeof (Uint32));
-		// SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
-		// SDL_RenderPresent(renderer);
 	}
 
 	// Cleanup
