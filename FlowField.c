@@ -52,7 +52,7 @@ int seed = 10;
 int renderMode = 1;
 
 ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {14, 12, 89, 255}};
-ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {7, 130, 122, 255}};
+ColorPicker partPicker = {{810, 576, 180, 100}, {810, 686, 180, 30}, {7, 130, 122, 255}};
 ColorPicker *pickers[] = {&bgPicker, &partPicker};
 
 Slider fieldSize = {{815, 71, 172, 22}, 1, 8, 16};
@@ -345,6 +345,8 @@ int main() {
 
 	// Main loop
 	int quit = 0;
+	SDL_Cursor *c;
+	SDL_Rect newSeed = {810, 740, 180, 50};
 	while (!quit) {
 
 		// Handle inputs
@@ -361,7 +363,7 @@ int main() {
 			else if (event.type == SDL_MOUSEBUTTONDOWN) {
 
 				// New seed
-				if (event.button.y > 735 && event.button.y < 785) {
+				if (isInside(event.button.x ,event.button.y, newSeed)) {
 					printf("New seed\n");
 					seed = randomInt(0, 255);
 					createVectorField();
@@ -397,6 +399,36 @@ int main() {
 						goto end;
 					}
 				}
+			}
+
+			else if (event.type == SDL_MOUSEMOTION) {
+				// Button
+				if (isInside(event.button.x ,event.button.y, newSeed)) {
+					c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+					SDL_SetCursor(c);
+					continue;
+				}
+
+				// Sliders
+				for (unsigned int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
+					if (isInside(event.button.x, event.button.y, (*sliders[i]).zone)) {
+						c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+						SDL_SetCursor(c);
+						goto end;
+					}
+				}
+
+				// Pickers
+				ColorPicker currentPicker;
+				for (unsigned int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
+					if (isInside(event.button.x, event.button.y, (*pickers[i]).picker)) {
+						c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR);
+						SDL_SetCursor(c);
+						goto end;
+					}
+				}
+				c = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+				SDL_SetCursor(c);
 			}
 
 			end: ;
