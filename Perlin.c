@@ -5,13 +5,10 @@
 
 // clear; gcc $(pkg-config --cflags --libs sdl2) Perlin.c -o Perlin; ./Perlin; rm ./Perlin
 
-// Motion
-// Dynamic picker getter / setter
-
-// Grid size
-// Part random color
-// Inertia
-
+// TODO:
+// Handle mouse motion on sliders and color pickers
+// Rework how particles move (inertia & speed)
+// Dynamic position of color pickers
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
@@ -78,6 +75,7 @@ int renderMode = 1;
 
 ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {14, 12, 89, 255}};
 ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {7, 130, 122, 255}};
+ColorPicker *pickers[] = {&bgPicker, &partPicker};
 
 Slider fieldSize = {{820, 71, 160, 22}, 3, 8, 16};
 Slider particles = {{815, 341, 160, 22}, 5000, 10000, 500000};
@@ -178,8 +176,6 @@ double getValue(int x, int y) {
 	double dx = (x % gridSize) / (float) gridSize;
 	double dy = (y % gridSize) / (float) gridSize;
 
-	// printf("dx: %f, dy: %f\n", dx, dy);
-
 	double d0 = dotProduct(x, y, vectorField[x0 + y0 * (fieldSize.value + 1)]);
 	double d1 = dotProduct(x, y, vectorField[x1 + y0 * (fieldSize.value + 1)]);
 	double d2 = dotProduct(x, y, vectorField[x0 + y1 * (fieldSize.value + 1)]);
@@ -243,6 +239,11 @@ void createFlowField() {
 }
 
 
+int isInside(int x, int y, SDL_Rect zone) {
+	return x > zone.x && x < zone.x + zone.w && y > zone.y && y < zone.y + zone.h;
+}
+
+
 
 Color HsvaToRgba(int h, int s, int v, int a) {
     Color rgb = {0, 0, 0, a};
@@ -290,19 +291,27 @@ Color HsvaToRgba(int h, int s, int v, int a) {
 }
 
 void createColorPickers() {
-	// SDL_RenderCopy(renderer, sidebarTexture, NULL, NULL);
-	Rect r1 = {810, 227, 180, 30, bgPicker.color};
-	Rect r2 = {810, 682, 180, 30, partPicker.color};
-	drawAlphaRect(r1);
-	drawAlphaRect(r2);
-
 	Color c;
-	for (int x = 0; x < 180; x++) {
-		for (int y = 0; y < 100; y++) {
-			c = HsvaToRgba(x * 1.41, (10000 - y * y) / 39.21, y * 2.55, 255);
-			SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
-			SDL_RenderDrawPoint(renderer, 810 + x, 117 + y);
-			SDL_RenderDrawPoint(renderer, 810 + x, 572 + y);
+	ColorPicker currentPicker;
+
+	for (int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
+		currentPicker = *pickers[i];
+
+		// Swatches
+		SDL_SetRenderDrawColor(renderer, currentPicker.color.r, currentPicker.color.g, currentPicker.color.b, 255);
+		SDL_RenderFillRect(renderer, &(*pickers[i]).swatch);
+
+		// Pickers
+		for (int x = 0; x < currentPicker.picker.w; x++) {
+			for (int y = 0; y < currentPicker.picker.h; y++) {
+				c = HsvaToRgba(
+					x * (255 / currentPicker.picker.w),
+					(10000 - y * y) / (currentPicker.picker.h * currentPicker.picker.h / (float) 255),
+					y * (255 / currentPicker.picker.h),
+					255);
+				SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+				SDL_RenderDrawPoint(renderer, currentPicker.picker.x + x, currentPicker.picker.y + y);
+			}
 		}
 	}
 }
@@ -312,7 +321,7 @@ void createSliders() {
 	Rect cursor = {0, 0, 5, 22, {170, 125, 30 ,255}};
 	Slider currentSlider;
 
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
 		currentSlider = *sliders[i];
 		cursor.x = currentSlider.zone.x + (currentSlider.value - currentSlider.min) / (float) (currentSlider.max - currentSlider.min) * currentSlider.zone.w;
 		cursor.y = currentSlider.zone.y;
@@ -374,49 +383,43 @@ int main() {
 			}
 			else if (event.type == SDL_MOUSEBUTTONDOWN) {
 
-				if (event.button.x < 810 || event.button.x > 990){
-					continue;
-				}
-				// Background picker
-				if (event.button.y > 117 && event.button.y < 217) {
-					printf("Background picker\n");
-					int y = event.button.y - 117;
-					Color c = HsvaToRgba((event.button.x - 810) * 1.41, (10000 - y * y) / 39.21, y * 2.55, 255);
-					bgPicker.color = c;
-					cleanScreen();
-
-				}
-				// Particle picker
-				else if (event.button.y > 572 && event.button.y < 672) {
-					printf("Particles picker\n");
-					int y = event.button.y - 572;
-					Color c = HsvaToRgba((event.button.x - 810) * 1.41, (10000 - y * y) / 39.21, y * 2.55, 255);
-					partPicker.color = c;
-					cleanScreen();
-				}
 				// New seed
-				else if (event.button.y > 735 && event.button.y < 785) {
+				if (event.button.y > 735 && event.button.y < 785) {
 					printf("New seed\n");
 					seed = randomInt(0, 255);
 					createVectorField();
 					cleanScreen();
+					goto end;
 				}
 
 				// Sliders
-				else {
-					Slider currentSlider;
-					for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
-						currentSlider = *sliders[i];
-						if (event.button.x > currentSlider.zone.x && event.button.x < currentSlider.zone.x + currentSlider.zone.w && event.button.y > currentSlider.zone.y && event.button.y < currentSlider.zone.y + currentSlider.zone.h) {
-							(*sliders[i]).value = (event.button.x - currentSlider.zone.x) / (float) currentSlider.zone.w * (currentSlider.max - currentSlider.min) + currentSlider.min;
-							if (sliders[i] == &fieldSize) {
-								createVectorField();
-							}
-							cleanScreen();
+				Slider currentSlider;
+				for (int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
+					currentSlider = *sliders[i];
+					if (isInside(event.button.x, event.button.y, currentSlider.zone)) {
+						(*sliders[i]).value = (event.button.x - currentSlider.zone.x) / (float) currentSlider.zone.w * (currentSlider.max - currentSlider.min) + currentSlider.min;
+						if (sliders[i] == &fieldSize) {
+							createVectorField();
 						}
+						cleanScreen();
+						goto end;
 					}
 				}
 
+				// Pickers
+				ColorPicker currentPicker;
+				for (int i = 0; i < sizeof(pickers) / sizeof(pickers[0]); i++) {
+					currentPicker = *pickers[i];
+					if (isInside(event.button.x, event.button.y, currentPicker.picker)) {
+						(*pickers[i]).color = HsvaToRgba(
+							(event.button.x - currentPicker.picker.x) * (255 / currentPicker.picker.w),
+							(10000 - (event.button.y - currentPicker.picker.y) * (event.button.y - currentPicker.picker.y)) / (currentPicker.picker.h * currentPicker.picker.h / (float) 255),
+							(event.button.y - currentPicker.picker.y) * (255 / currentPicker.picker.h),
+							255);
+						cleanScreen();
+						goto end;
+					}
+				}
 
 
 			}
@@ -438,6 +441,9 @@ int main() {
 				// 		break;
 				// }
 			}
+
+			end: ;
+
 		}
 	}
 
