@@ -3,11 +3,10 @@
 #include <stdlib.h>
 #include <math.h>
 
-// clear; gcc $(pkg-config --cflags --libs sdl2) Perlin.c -o Perlin; ./Perlin; rm ./Perlin
+// clear; gcc $(pkg-config --cflags --libs sdl2) FlowField.c -o FlowField; ./FlowField; rm ./FlowField
 
 // TODO:
 // Handle mouse motion on sliders and color pickers
-// Rework how particles move (inertia & speed)
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
@@ -76,13 +75,13 @@ ColorPicker bgPicker = 	 {{810, 117, 180, 100}, {810, 227, 180, 30}, {14, 12, 89
 ColorPicker partPicker = {{810, 572, 180, 100}, {810, 682, 180, 30}, {7, 130, 122, 255}};
 ColorPicker *pickers[] = {&bgPicker, &partPicker};
 
-Slider fieldSize = {{820, 71, 160, 22}, 3, 8, 16};
-Slider particles = {{815, 341, 160, 22}, 5000, 10000, 500000};
-Slider lifespan = {{815, 384, 160, 22}, 5, 25, 50};
-Slider speed = {{815, 431, 160, 22}, 1, 5, 30};
-Slider inertia = {{815, 474, 160, 22}, 0, 0, 100};
-Slider opacity = {{815, 521, 160, 22}, 0, 100, 255};
-Slider *sliders[] = {&fieldSize, &particles, &lifespan, &speed, &inertia, &opacity};
+Slider fieldSize = {{815, 71, 172, 22}, 1, 8, 16};
+Slider particles = {{815, 343, 172, 22}, 5000, 10000, 100000};
+Slider lifespan = {{815, 388, 172, 22}, 5, 25, 50};
+Slider speed = {{815, 433, 172, 22}, 1, 5, 30};
+Slider opacity = {{815, 478, 172, 22}, 0, 100, 255};
+Slider colorRange = {{815, 524, 172, 22}, 0, 40, 128};
+Slider *sliders[] = {&fieldSize, &particles, &lifespan, &speed, &opacity, &colorRange};
 
 Vector vectorField[400];
 
@@ -210,15 +209,14 @@ void createFlowField() {
 
 	else if (renderMode == 1) {
 		srand(seed);
-		int colorSpread = 40;
 		for (int i = 0; i < particles.value; ++i) {
 			int baseX = randomInt(0, SCREEN_WIDTH);
 			int baseY = randomInt(0, SCREEN_HEIGHT);
 			SDL_SetRenderDrawColor(
 				renderer,
-				clamp(partPicker.color.r + randomInt(-colorSpread, colorSpread), 0, 255),
-				clamp(partPicker.color.g + randomInt(-colorSpread, colorSpread), 0, 255),
-				clamp(partPicker.color.b + randomInt(-colorSpread, colorSpread), 0, 255),
+				clamp(partPicker.color.r + randomInt(-colorRange.value, colorRange.value), 0, 255),
+				clamp(partPicker.color.g + randomInt(-colorRange.value, colorRange.value), 0, 255),
+				clamp(partPicker.color.b + randomInt(-colorRange.value, colorRange.value), 0, 255),
 				opacity.value);
 
 			for (int j = 0; j < lifespan.value; ++j)
@@ -317,12 +315,12 @@ void createColorPickers() {
 
 
 void createSliders() {
-	Rect cursor = {0, 0, 5, 22, {170, 125, 30 ,255}};
+	Rect cursor = {0, 0, 4, 22, {249, 226, 175 ,255}};
 	Slider currentSlider;
 
 	for (unsigned int i = 0; i < sizeof(sliders) / sizeof(sliders[0]); i++) {
 		currentSlider = *sliders[i];
-		cursor.x = currentSlider.zone.x + (currentSlider.value - currentSlider.min) / (float) (currentSlider.max - currentSlider.min) * currentSlider.zone.w;
+		cursor.x = currentSlider.zone.x + (currentSlider.value - currentSlider.min) / (float) (currentSlider.max - currentSlider.min) * currentSlider.zone.w - 2;
 		cursor.y = currentSlider.zone.y;
 		drawAlphaRect(cursor);
 	}
