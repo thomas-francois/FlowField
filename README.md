@@ -1,7 +1,7 @@
 # Flowfield Generator with Perlin Noise
 This project presents a flowfield generator implemented in C, using the basic SDL graphic library for rendering. The core algorithm employs a custom implementation of Perlin noise, to generate intricate and dynamic flow patterns.
 
-![FlowField_1](https://github.com/thomas-francois/FlowField/assets/103375765/31fbb141-1ea7-406f-b622-1259f0b98eea)
+![FlowField_1](https://github.com/thomas-francois/FlowField/assets/103375765/e61e0c7f-eab5-476c-bf9d-2222accc36b2)
 ![FlowField_2](https://github.com/thomas-francois/FlowField/assets/103375765/8cd35151-b23d-4f9e-86df-4c4030e5c42f)
 ![FlowField_3](https://github.com/thomas-francois/FlowField/assets/103375765/6d1a46a8-d4fb-4020-9d2e-437c8d0316a6)
 
